@@ -113,7 +113,7 @@ function cli:GenerateContent(contents:string|datatype.content, model:string): da
         local contents:datatype.content = {{
             parts = {
                 {
-                    text = text,
+                    text = contents,
                 }
             }
         }}
