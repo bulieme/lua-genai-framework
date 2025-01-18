@@ -25,8 +25,8 @@ function essentials:makeGenerationConfig(temperature:number?,
 end
 
 function essentials:SafetySetting(
-    category:enums.harmCategory,
-    threshold:enums.harmBlockThreshold
+    category:string,
+    threshold:string
 ):datatype.safetySetting
     return {
         category = category,

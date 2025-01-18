@@ -2,4 +2,7 @@
 Made with [Rojo](https://github.com/rojo-rbx/rojo) 7.4.4.
 
 ## Getting Started
-unfinished
+Set it up using rojo, by running `rojo serve`
+
+on roblox studio, install rojo, and connect.
+Once connected, use the module like normal

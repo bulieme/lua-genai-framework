@@ -16,7 +16,6 @@ cli.__index = cli
 cli.datatype = datatype
 cli.enums = enums
 cli.essentials = essentials
-
 --[[
 Create a brand new client.
 <code>api: (Secret | string) </code>: Your api key. for the client instance.
@@ -94,10 +93,10 @@ end
 
 --[[
 Generate a new content.
-<code>contents: string</code>: The text to be send with.
-<code>model: string</code>: The model used for generating the content.
+<code><strong>contents</strong>: string</code> The text to be sent with.
+<code><strong>model</strong>: string</code> The model used for generating the content.
 ]]
-function cli:GenerateContent(contents:string|datatype.content, model:string): datatype.generateContentResponse
+function cli:GenerateContent(contents:string|{datatype.content}, model:string): datatype.generateContentResponse
     local modelInfo = self:_findModelInfo(model)
     if contains(modelInfo.supportedGenerationMethods, "generateContent") then
         local conf = makeGenerationConfigFromModelObject(self.generationConfig, modelInfo)
@@ -110,15 +109,15 @@ function cli:GenerateContent(contents:string|datatype.content, model:string): da
         end
 
         -- Needed rework on content system
-        local contents:datatype.content = {{
+        local content:{datatype.content} = (typeof(contents) == "string") and {{
             parts = {
                 {
                     text = contents,
                 }
             }
-        }}
+        }} or contents
 
-        local data = essentials:makeRequestData(contents, conf, self.systemInstructions, self.safetySettings)
+        local data = essentials:makeRequestData(content, conf, self.systemInstructions, self.safetySettings)
         local success, response = pcall(function()
             return HttpService:PostAsync(endpoint, HttpService:JSONEncode(data), Enum.HttpContentType.ApplicationJson)
         end)
@@ -132,6 +131,40 @@ function cli:GenerateContent(contents:string|datatype.content, model:string): da
     else
         error("Model does not support generateContent: ".. model)
     end
+end
+
+--[[
+Make a new chat session.
+Returns: A chat session instance.
+]]
+function cli:newChat()
+    local chat = {}
+    chat.__index = chat
+    chat.client = self
+    chat.messages = {}
+
+    function chat:Chat(message:string|datatype.content, role:{"user"|"model"}?)
+        local role = role or "user"
+        local message = (typeof(message) == "string") and {
+            parts = {
+                {
+                    text = message,
+                }
+            }
+        } or message
+        if role then
+            message.role = role
+        end
+        table.insert(self.messages, message)
+    end
+
+    function chat:GenerateResponse(model:string): datatype.generateContentResponse
+        local generatedResponse = self.client:GenerateContent(self.messages, model)
+        table.insert(self.messages, generatedResponse.candidates[1].content)
+        return generatedResponse
+    end
+
+    return chat
 end
 
 return cli
