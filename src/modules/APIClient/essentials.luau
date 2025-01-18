@@ -44,9 +44,7 @@ function essentials:makeRequestData(
     local data:datatype.requestData = {
         contents = contents,
         generationConfig = generationConfig,
-        systemInstruction = ((type(systemInstructions) == "string") and {
-            parts = {{text = systemInstructions}}
-        } or systemInstructions) or nil,
+        systemInstruction = systemInstructions and ((typeof(systemInstructions) == "string") and {parts = {{text = systemInstructions}} } or systemInstructions) or nil,
     }
 
     return data

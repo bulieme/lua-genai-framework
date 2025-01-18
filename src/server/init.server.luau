@@ -5,16 +5,17 @@ local apiKey = HttpService:GetSecret("google")
 
 local genAI = require(ReplicatedStorage.APIClient)
 local cli = genAI.new(apiKey)
-cli.systemInstructions = "You are an helpful assistant."
+cli.systemInstructions = [[You are an helpful assistant.]]
 cli.safetySettings = {
-    genAI.essentials:SafetySetting(genAI.enums.harmCategory.HARM_CATEGORY_HATE_SPEECH, genAI.enums.harmProbability.MEDIUM),
-    genAI.essentials:SafetySetting(genAI.enums.harmCategory.HARM_CATEGORY_HARASSMENT, genAI.enums.harmProbability.MEDIUM),
+    genAI.essentials:SafetySetting(genAI.enums.harmCategory.HARM_CATEGORY_HATE_SPEECH, genAI.enums.harmProbability.LOW),
+    genAI.essentials:SafetySetting(genAI.enums.harmCategory.HARM_CATEGORY_HARASSMENT, genAI.enums.harmProbability.LOW),
 }
-local model = "models/gemini-1.5-pro-latest"
+
+local model = "models/gemini-2.0-flash-thinking-exp"
 
 local resp = cli:GenerateContent(
-    "I support Martians Soccer Club and I think Jupiterians Football Club sucks! Write a ironic phrase about them.",
+    "Hello! How are you today?",
     model
 )
 
-print(resp)
+print(resp.candidates[1])

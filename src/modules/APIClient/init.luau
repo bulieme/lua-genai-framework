@@ -25,7 +25,7 @@ function cli.new(api: Secret|string)
         api = api,
         baseUrl = "https://generativelanguage.googleapis.com/v1beta/",
         generationConfig = essentials:makeGenerationConfig(),
-        systemInstructions = "",
+        systemInstructions = nil,
     }
     setmetatable(_cli, cli)
     return _cli
@@ -118,6 +118,7 @@ function cli:GenerateContent(contents:string|{datatype.content}, model:string): 
         }} or contents
 
         local data = essentials:makeRequestData(content, conf, self.systemInstructions, self.safetySettings)
+        
         local success, response = pcall(function()
             return HttpService:PostAsync(endpoint, HttpService:JSONEncode(data), Enum.HttpContentType.ApplicationJson)
         end)
@@ -138,12 +139,17 @@ Make a new chat session.
 Returns: A chat session instance.
 ]]
 function cli:newChat()
-    local chat = {}
-    chat.__index = chat
-    chat.client = self
-    chat.messages = {}
+    local chatSession = {}
+    chatSession.__index = chatSession
+    chatSession.client = self
+    chatSession.messages = {}
 
-    function chat:Chat(message:string|datatype.content, role:{"user"|"model"}?)
+    --[[
+    Send a message to the chat.
+    <code><strong>message</strong>: string | datatype.content</code> The message to be sent.
+    <code><strong>role</strong>: "user" | "model"?</code> Optional. The role of the message.
+    ]]
+    function chatSession:Chat(message:string|datatype.content, role:{"user"|"model"}?)
         local role = role or "user"
         local message = (typeof(message) == "string") and {
             parts = {
@@ -158,13 +164,18 @@ function cli:newChat()
         table.insert(self.messages, message)
     end
 
-    function chat:GenerateResponse(model:string): datatype.generateContentResponse
+    --[[
+    Generate a response.
+    <code><strong>model</strong>: string</code> The model used for generating the content.
+    Returns: The generated response. The response is inserted in <code>chatsession.messages</code>
+    ]]
+    function chatSession:GenerateResponse(model:string): datatype.generateContentResponse
         local generatedResponse = self.client:GenerateContent(self.messages, model)
         table.insert(self.messages, generatedResponse.candidates[1].content)
         return generatedResponse
     end
 
-    return chat
+    return chatSession
 end
 
 return cli
