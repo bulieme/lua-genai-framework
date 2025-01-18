@@ -6,3 +6,8 @@ Set it up using rojo, by running `rojo serve`
 
 on roblox studio, install rojo, and connect.
 Once connected, use the module like normal
+
+## Todo's
+- [x] Implement safety features
+- [] implement function call
+- more todo's coming later
