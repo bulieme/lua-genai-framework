@@ -23,7 +23,8 @@ export type functionCall = {
 
 export type functionDeclaration = {
     name: string,
-    args: {
+    description: string,
+    parameters: {
         any -- schema
     }?,
 }
@@ -80,12 +81,27 @@ export type model = {
     topK: number
 }
 
+
+export type functionCallingConfig = {
+    mode: {"AUTO" | "ANY" | "NONE"},
+    allowedFunctionNames: {string}?,
+}
+
+export type toolConfig = {
+    functionCallingConfig: functionCallingConfig
+}
+
+export type tool = {
+    functionDeclarations: {functionDeclaration},
+}
+
 export type requestData = {
-    contents: {
-        content
-    },
-    systemInstructions: content,
-    generationConfig: generationConfig
+    contents: {content},
+    tools: {tool},
+    toolConfig: {toolConfig},
+    safetySettings: {safetySetting},
+    systemInstruction: content,
+    generationConfig: generationConfig,
 }
 
 export type usageMetadata = {

@@ -39,10 +39,15 @@ function essentials:makeRequestData(
     contents:datatype.content,
     generationConfig:datatype.generationConfig?,
     systemInstructions:{datatype.content | string}?,
-    safetySettings:{datatype.safetySetting}?
+    safetySettings:{datatype.safetySetting}?,
+    tools:{datatype.tool}?,
+    toolConfig:{datatype.toolConfig}?
 ):datatype.requestData
     local data:datatype.requestData = {
         contents = contents,
+        tools = tools,
+        toolConfig = toolConfig,
+        safetySettings = safetySettings,
         generationConfig = generationConfig,
         systemInstruction = systemInstructions and ((typeof(systemInstructions) == "string") and {parts = {{text = systemInstructions}} } or systemInstructions) or nil,
     }

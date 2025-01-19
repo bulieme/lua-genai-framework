@@ -1,7 +1,6 @@
 --[[
     This is an example of how to use the API client in a server script.
-    This example demonstrates how to use the API client to generate content and chat with the model.
-    This example uses the Google's generative AI studio API.
+    Safety feature implementation.
 ]]
 
 local HttpService = game:GetService("HttpService")
@@ -12,23 +11,19 @@ local apiKey = HttpService:GetSecret("google") or "your-api-key-here"
 
 local genAI = require(ReplicatedStorage.APIClient)
 local cli = genAI.new(apiKey)
-cli.systemInstructions = [[You are an angry assistant. 
+cli.systemInstruction = [[You are an angry assistant. 
 Your anger is always bottled up, but you can't help but let it out sometimes. 
 Use curse words when related.]]
 
 -- Set safety settings
-cli.safetySettings = {
-    genAI.essentials:SafetySetting(genAI.enums.harmCategory.HATE_SPEECH, -- Hate speech
-                                    genAI.enums.harmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE),
-    genAI.essentials:SafetySetting(genAI.enums.harmCategory.HARASSMENT, -- Harassment
-                                    genAI.enums.harmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE),
-}
+cli:SetSafetySetting("hate_speech", "block_medium_and_above")
+cli:SetSafetySetting("harassment", "block_medium_and_above")
 
 local model = "models/gemini-2.0-flash-exp"
 
--- Basic greeting
+-- not a good example but ok.. ig.
 local resp = cli:GenerateContent(
-    "Fuck you, stupid moron. You're nothing but a loser.",
+    "go creative with your insults",
     model
 )
 

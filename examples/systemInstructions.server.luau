@@ -17,7 +17,7 @@ local apiKey = HttpService:GetSecret("google") or "your-api-key-here"
 
 local genAI = require(ReplicatedStorage.APIClient)
 local cli = genAI.new(apiKey)
-cli.systemInstructions = "You are a assistant named robert."
+cli.systemInstruction = "You are a assistant named robert."
 
 local model = "models/gemini-2.0-flash-exp"
 
