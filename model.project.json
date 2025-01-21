@@ -1,5 +1,5 @@
 {
-    "name": "APICLient",
+    "name": "APIClient",
     "tree": {
         "$path": "src/module/APIClient"
     }
