@@ -8,9 +8,7 @@
 		},
 
 		"ServerScriptService": {
-			"examples":{
-				"$path": "src/examples"
-			}
+			"$path": "src/examples"
 		}
 	}
 }
