@@ -1,7 +1,45 @@
+local HttpService = game:GetService("HttpService")
 local essentials = {}
 
 local datatype = require(script.Parent.datatypes)
 local enums = require(script.Parent.enums)
+
+function essentials:functionDeclaration2Schema(declaration: datatype.functionDeclare): {any}?
+    local templateSchema:datatype.functionDeclare = {
+        name = "",
+        description = "",
+        parameters = {
+            type = "object",
+            properties = {
+                --[[
+                test = {
+                    type = "string",
+                    description = ""
+                }
+                ]]
+            },
+            required = {
+                --[[
+                "test"
+                ]]
+            }
+        }
+    }
+    
+    templateSchema.name = declaration.name
+    templateSchema.description = declaration.description
+    templateSchema.parameters.properties = {}
+    for argName, argData in pairs(declaration.args) do
+        templateSchema.parameters.properties[argName] = {
+            type = argData.type,
+            description = argData.description
+        }
+        if argData.required then
+            table.insert(templateSchema.parameters.required, argName)
+        end
+    end
+    return templateSchema
+end
 
 function essentials:makeGenerationConfig(temperature:number?, 
                                          topP:number?,

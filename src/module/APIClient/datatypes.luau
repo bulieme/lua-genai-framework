@@ -128,9 +128,7 @@ export type promptFeedback = {
 }
 
 export type candidate = {
-    content: {
-        content
-    },
+    content:  content,
     finishReason: enums.finishReason,
     safetyRatings: {safetyRating},
     tokenCount: number,
@@ -143,6 +141,19 @@ export type generateContentResponse = {
     promptFeedback: promptFeedback,
     usageMetadata: usageMetadata,
     modelVersion: string,
+}
+
+export type functionDeclare = {-- non official structure type for lua usability
+    name: string,
+    description: string,
+    args: {
+        [string]: {
+            type: string,
+            description: string, 
+            required: boolean
+        }
+    },
+    callbackFunction: ({}) -> any
 }
 
 return datatype

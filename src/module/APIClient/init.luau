@@ -9,21 +9,9 @@ type client = {
     generationConfig: datatype.generationConfig,
     systemInstructions: datatype.content,
     safetySettings: {datatype.safetySetting},
-    functions: {functionDeclare},
-    functionCallingMode: "ANY" | "NONE" | "AUTO"
-}
-
-export type functionDeclare = {
-    name: string,
-    description: string,
-    args: {
-        [string]: {
-            type: string,
-            description: string, 
-            required: boolean
-        }
-    },
-    callbackFunction: ({}) -> any
+    functions: {datatype.functionDeclare},
+    functionCallingMode: "ANY" | "NONE" | "AUTO",
+    jsonStructure: {}
 }
 
 local cli = {}
@@ -32,43 +20,6 @@ cli.datatype = datatype
 cli.enums = enums
 cli.essentials = essentials
 
---TODO: move all unnececary function into its place. THis > essentials.
-local function functionDeclaration2Schema(declaration: functionDeclare): {any}?
-    local templateSchema:functionDeclare = {
-        name = "",
-        description = "",
-        parameters = {
-            type = "object",
-            properties = {
-                --[[
-                test = {
-                    type = "string",
-                    description = ""
-                }
-                ]]
-            },
-            required = {
-                --[[
-                "test"
-                ]]
-            }
-        }
-    }
-    
-    templateSchema.name = declaration.name
-    templateSchema.description = declaration.description
-    templateSchema.parameters.properties = {}
-    for argName, argData in pairs(declaration.args) do
-        templateSchema.parameters.properties[argName] = {
-            type = argData.type,
-            description = argData.description
-        }
-        if argData.required then
-            table.insert(templateSchema.parameters.required, argName)
-        end
-    end
-    return templateSchema
-end
 
 --[[
 Create a brand new client.
@@ -81,8 +32,10 @@ function cli.new(api: Secret|string)
         generationConfig = essentials:makeGenerationConfig(),
         systemInstruction = nil,
         safetySettings = nil,
-        functions = nil,
-        functionCallingMode = nil
+        functions = {},
+        functionCallingMode = nil,
+        jsonStructure = nil
+        
     }
     setmetatable(_cli, cli)
     return _cli
@@ -173,9 +126,13 @@ Register a functionCall to the client.
 inputs:
 <code><strong>Fdeclared</strong>: functionDeclare</code> The function declaration. Containing the real function.
 ]]
-function cli:RegisterFunction(Fdeclared: functionDeclare)
+function cli:RegisterFunction(Fdeclared: datatype.functionDeclare)
     self.functions = {}
     table.insert(self.functions, Fdeclared)
+end
+
+function cli:SetJsonStructure(str)
+    self.jsonStructure = str
 end
 
 --[[
@@ -186,11 +143,16 @@ inputs:
 <code><strong>contents</strong>: string</code> The text to be sent with.
 <code><strong>model</strong>: string</code> The model used for generating the content.
 ]]
-function cli:GenerateContent(contents:string|{datatype.content}, model:string): datatype.generateContentResponse
+function cli:GenerateContent(contents:string|{datatype.content}, model:string, handleFunctionCalls:boolean?): datatype.generateContentResponse
     local modelInfo = self:_findModelInfo(model)
     if contains(modelInfo.supportedGenerationMethods, "generateContent") then
         local conf = makeGenerationConfigFromModelObject(self.generationConfig, modelInfo)
         local endpoint = self.baseUrl .. modelInfo.name .. ":generateContent"
+
+        if self.jsonStructure then
+            conf.responseSchema = self.jsonStructure
+        end
+
         if type(self.api) == "string" then
             endpoint = endpoint .. "?key=" .. self.api
         else
@@ -208,53 +170,61 @@ function cli:GenerateContent(contents:string|{datatype.content}, model:string): 
         } or contents
 
         local functionDeclarations = {}
-        local toolConfig = {
-            functionCallingConfig = {
-                mode = self.functionCallingMode or "auto",
-            }
-        }
-        for _, func:functionDeclare in ipairs(self.functions) do
-            table.insert(functionDeclarations, functionDeclaration2Schema(func))
+        for _, func in ipairs(self.functions) do
+            table.insert(functionDeclarations, essentials:functionDeclaration2Schema(func))
         end
-        local tools = {
-            {
-                functionDeclarations = functionDeclarations
+        local toolConfig, tools
+        if self.functions and #self.functions ~= 0 then
+            toolConfig = {
+                functionCallingConfig = {
+                    mode = self.functionCallingMode or "auto",
+                }
             }
-        }
+            tools = {
+                {
+                    functionDeclarations = functionDeclarations
+                }
+            }
+        end
 
         local data = essentials:makeRequestData(content, conf, self.systemInstruction, self.safetySettings, tools, toolConfig)
-        
+        print(data)
+
         local success, response = pcall(function()
-            return HttpService:PostAsync(endpoint, HttpService:JSONEncode(data), Enum.HttpContentType.ApplicationJson)
+            return HttpService:PostAsync(endpoint, HttpService:JSONEncode(data))
         end)
         if success then
             local resp:datatype.generateContentResponse = HttpService:JSONDecode(response)
             local content_model:datatype.content = resp.candidates[1].content
-            for _, part in ipairs(content_model.parts) do
-                local funcCall:datatype.functionCall = part.functionCall
-                if funcCall then
-                    for _, f:functionDeclare in ipairs(self.functions) do
-                        if f.name == funcCall.name then
-                            local callbackResponse = f.callbackFunction(funcCall.args)
-                            local functionResponse:datatype.functionResponse = {
-                                name = f.name,
-                                response = callbackResponse
-                            } 
-                            local cont:datatype.content = {
-                                content,
-                                content_model,
-                                {
-                                    parts = {
-                                        functionResponse = functionResponse
-                                    },
-                                    role = "user"
+
+            if handleFunctionCalls then
+                for _, part in ipairs(content_model.parts) do
+                    local funcCall:datatype.functionCall = part.functionCall
+                    if funcCall then
+                        for _, f:datatype.functionDeclare in ipairs(self.functions) do
+                            if f.name == funcCall.name then
+                                local callbackResponse = f.callbackFunction(funcCall.args)
+                                local functionResponse:datatype.functionResponse = {
+                                    name = f.name,
+                                    response = callbackResponse
+                                } 
+                                local cont:datatype.content = {
+                                    content,--user 
+                                    content_model,-- the model's function call
+                                    {
+                                        parts = {
+                                            functionResponse = functionResponse
+                                        },
+                                        role = "user"
+                                    } -- function's response
                                 }
-                            }
-                            return self:GenerateContent(cont, model)
+                                return self:GenerateContent(cont, model)
+                            end
                         end
                     end
                 end
             end
+
             return resp
         else
             error("Failed to generate content: " .. response)
@@ -300,9 +270,31 @@ function cli:newChat()
     <code><strong>model</strong>: string</code> The model used for generating the content.
     Returns: The generated response. The response is inserted in <code>chatsession.messages</code>
     ]]
-    function chatSession:GenerateResponse(model:string): datatype.generateContentResponse
-        local generatedResponse = self.client:GenerateContent(self.messages, model)
+    function chatSession:GenerateResponse(model:string, handleFunctionCalls:boolean?): datatype.generateContentResponse
+        local generatedResponse = self.client:GenerateContent(self.messages, model, false)
         table.insert(self.messages, generatedResponse.candidates[1].content)
+        if handleFunctionCalls then
+            for _, part in ipairs(generatedResponse.candidates[1].content.parts) do
+                local funcCall:datatype.functionCall = part.functionCall
+                if funcCall then
+                    for _, f:datatype.functionDeclare in ipairs(self.client.functions) do
+                        if f.name == funcCall.name then
+                            local callbackResponse = f.callbackFunction(funcCall.args)
+                            local functionResponse:datatype.functionResponse = {
+                                name = f.name,
+                                response = callbackResponse
+                            }
+                            self:Chat(
+                                {
+                                    parts = {functionResponse = functionResponse}
+                                }
+                            , "user")
+                            return self:GenerateResponse(model)
+                        end
+                    end
+                end
+            end
+        end
         return generatedResponse
     end
 
