@@ -4,3 +4,4 @@
 
 #ignore luau files in examples folder
 /src/examples/*.luau
+/ignore
