@@ -1,8 +1,6 @@
-# Project place file
-/game.rbxlx
+#ignore every rojo compiled things
+/*.rbxlx
+/*.rbx*
 
-# Roblox Studio lock files
-/*.rbxlx.lock
-/*.rbxl.lock
-
+#ignore luau files in examples folder
 /src/examples/*.luau
