@@ -2,10 +2,16 @@
 Made with [Rojo](https://github.com/rojo-rbx/rojo) 7.4.4.
 
 ## Getting Started
-Set it up using rojo, by running `rojo serve`
+Install rojo, and clone this repo.
 
-on roblox studio, install rojo, and connect.
-Once connected, use the module like normal
+After that, Build the module with this command: 
+```shell
+rojo build -o APIClient.rbxm  model.project.json
+```
+
+Drag the `APIClient.rbxm` into roblox studio and move it to Replicated storage.
+
+After that, you're good to go.
 
 ## Todo's
 - [x] Implement safety features
