@@ -7,7 +7,7 @@ type client = {
     api: Secret | string,
     baseUrl: string,
     generationConfig: datatype.generationConfig,
-    systemInstructions: datatype.content,
+    systemInstruction: datatype.content,
     safetySettings: {datatype.safetySetting},
     functions: {datatype.functionDeclare},
     functionCallingMode: "ANY" | "NONE" | "AUTO",
@@ -188,7 +188,6 @@ function cli:GenerateContent(contents:string|{datatype.content}, model:string, h
         end
 
         local data = essentials:makeRequestData(content, conf, self.systemInstruction, self.safetySettings, tools, toolConfig)
-        print(data)
 
         local success, response = pcall(function()
             return HttpService:PostAsync(endpoint, HttpService:JSONEncode(data))
