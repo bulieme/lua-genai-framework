@@ -29,7 +29,7 @@ function cli.new(api: Secret|string)
     local _cli:client = {
         api = api,
         baseUrl = "https://generativelanguage.googleapis.com/v1beta/",
-        generationConfig = essentials:makeGenerationConfig(),
+        generationConfig = nil,
         systemInstruction = nil,
         safetySettings = nil,
         functions = {},
@@ -131,8 +131,11 @@ function cli:RegisterFunction(Fdeclared: datatype.functionDeclare)
     table.insert(self.functions, Fdeclared)
 end
 
-function cli:SetJsonStructure(str)
-    self.jsonStructure = str
+function cli:SetJsonStructure(struct: {any})
+    if not struct then
+        error("Invalid json structure")
+    end
+    self.jsonStructure = struct
 end
 
 --[[
@@ -146,7 +149,7 @@ inputs:
 function cli:GenerateContent(contents:string|{datatype.content}, model:string, handleFunctionCalls:boolean?): datatype.generateContentResponse
     local modelInfo = self:_findModelInfo(model)
     if contains(modelInfo.supportedGenerationMethods, "generateContent") then
-        local conf = makeGenerationConfigFromModelObject(self.generationConfig, modelInfo)
+        local conf = self.generationConfig
         local endpoint = self.baseUrl .. modelInfo.name .. ":generateContent"
 
         if self.jsonStructure then
@@ -161,11 +164,7 @@ function cli:GenerateContent(contents:string|{datatype.content}, model:string, h
         end
 
         local content:{datatype.content} = (typeof(contents) == "string") and {
-            parts = {
-                {
-                    text = contents,
-                }
-            },
+            parts = {{text = contents,}},
             role = "user"
         } or contents
 
@@ -175,11 +174,13 @@ function cli:GenerateContent(contents:string|{datatype.content}, model:string, h
         end
         local toolConfig, tools
         if self.functions and #self.functions ~= 0 then
-            toolConfig = {
-                functionCallingConfig = {
-                    mode = self.functionCallingMode or "auto",
+            if self.functionCallingMode then
+                toolConfig = {
+                    functionCallingConfig = {
+                        mode = self.functionCallingMode or "auto",
+                    }
                 }
-            }
+            end
             tools = {
                 {
                     functionDeclarations = functionDeclarations
@@ -188,6 +189,7 @@ function cli:GenerateContent(contents:string|{datatype.content}, model:string, h
         end
 
         local data = essentials:makeRequestData(content, conf, self.systemInstruction, self.safetySettings, tools, toolConfig)
+        print(HttpService:JSONEncode(data))
 
         local success, response = pcall(function()
             return HttpService:PostAsync(endpoint, HttpService:JSONEncode(data))
@@ -198,11 +200,14 @@ function cli:GenerateContent(contents:string|{datatype.content}, model:string, h
 
             if handleFunctionCalls then
                 for _, part in ipairs(content_model.parts) do
-                    local funcCall:datatype.functionCall = part.functionCall
+                    local funcCall = part.functionCall
                     if funcCall then
+                        if essentials.countTable(funcCall.args) == 0 then
+                            funcCall.args = nil
+                        end
                         for _, f:datatype.functionDeclare in ipairs(self.functions) do
                             if f.name == funcCall.name then
-                                local callbackResponse = f.callbackFunction(funcCall.args)
+                                local callbackResponse = f.callbackFunction(funcCall.args or nil)
                                 local functionResponse:datatype.functionResponse = {
                                     name = f.name,
                                     response = callbackResponse
@@ -276,6 +281,9 @@ function cli:newChat()
             for _, part in ipairs(generatedResponse.candidates[1].content.parts) do
                 local funcCall:datatype.functionCall = part.functionCall
                 if funcCall then
+                    if essentials.countTable(funcCall.args) == 0 then
+                        funcCall.args = nil
+                    end
                     for _, f:datatype.functionDeclare in ipairs(self.client.functions) do
                         if f.name == funcCall.name then
                             local callbackResponse = f.callbackFunction(funcCall.args)
