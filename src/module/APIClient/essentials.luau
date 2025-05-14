@@ -18,7 +18,7 @@ function essentials:functionDeclaration2Schema(declaration: datatype.functionDec
     templateSchema.name = declaration.name
     templateSchema.description = declaration.description
 
-    if declaration.args and countTable(declaration.args) > 0 then
+    if declaration.args and essentials.countTable(declaration.args) > 0 then
         templateSchema.parameters = { type = "object", properties = {}, required = {} }
         for argName, argData in pairs(declaration.args) do
             templateSchema.parameters.properties[argName] = {
